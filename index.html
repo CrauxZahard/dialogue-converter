@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <title>Dialogue Converter - docx / txt to Unity DialogueAsset</title>
+  <meta name="description" content="Convert a .docx or .txt dialogue script into a Unity DialogueAsset (.asset) plus a canonical intermediate .txt. 100% in your browser.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h13A1.5 1.5 0 0 1 20 5.5v9a1.5 1.5 0 0 1-1.5 1.5H9l-4 3.5z"/>
+            <path d="M8 8.5h8M8 11.5h5"/>
+          </svg>
+        </span>
+        <div class="brand-text">
+          <h1>Dialogue Converter</h1>
+          <p class="tagline">docx / txt <span class="arrow">&rarr;</span> Unity <code>DialogueAsset</code></p>
+        </div>
+      </div>
+      <span class="privacy-badge">
+        <span class="pulse" aria-hidden="true"></span>
+        runs locally
+      </span>
+    </div>
+  </header>
+
+  <main class="wrap" id="main">
+    <!-- Step 1: Upload -->
+    <section class="card" id="step-upload" aria-labelledby="upload-title">
+      <div class="card-head">
+        <span class="step-no" aria-hidden="true">01</span>
+        <div>
+          <h2 id="upload-title">Upload a dialogue file</h2>
+          <p class="card-sub">Drag in a <code>.docx</code> or <code>.txt</code>. Files are parsed locally and never leave your machine.</p>
+        </div>
+      </div>
+
+      <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Upload a docx or txt file">
+        <div class="terminal-bar" aria-hidden="true">
+          <span class="dot dot-red"></span>
+          <span class="dot dot-amber"></span>
+          <span class="dot dot-green"></span>
+          <span class="terminal-path">~/dialogue-input</span>
+        </div>
+        <div class="dz-body">
+          <svg class="dz-icon" viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5"/>
+            <path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>
+          </svg>
+          <p class="dz-main">Drag a file here</p>
+          <p class="dz-sub">or</p>
+          <span class="btn btn-primary" id="browse-btn" aria-hidden="true">Choose file</span>
+          <p class="dz-hint"><span class="kbd">.docx</span> <span class="kbd">.txt</span> &middot; up to 5&nbsp;MB</p>
+        </div>
+        <input type="file" id="file-input" accept=".docx,.txt,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain" hidden>
+      </div>
+
+      <div class="file-summary is-hidden" id="file-summary">
+        <div class="file-meta">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>
+          </svg>
+          <span class="file-name" id="file-name">&nbsp;</span>
+          <span class="file-size" id="file-size"></span>
+          <span class="pill" id="mode-pill"></span>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" id="reset-btn">Start over</button>
+      </div>
+
+      <div class="error-panel is-hidden" id="error-panel" role="alert">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/>
+        </svg>
+        <div><strong>Could not convert this file.</strong> <span id="error-message"></span></div>
+      </div>
+    </section>
+
+    <!-- Step 2: Metadata -->
+    <section class="card is-hidden" id="step-meta" aria-labelledby="meta-title">
+      <div class="card-head">
+        <span class="step-no" aria-hidden="true">02</span>
+        <div>
+          <h2 id="meta-title">Metadata</h2>
+          <p class="card-sub">Written into the asset header and footer.</p>
+        </div>
+      </div>
+
+      <div class="meta-grid">
+        <label class="field">
+          <span class="field-label">Asset file name</span>
+          <span class="input-affix">
+            <input type="text" id="meta-asset-name" autocomplete="off" spellcheck="false">
+            <span class="affix">.asset</span>
+          </span>
+          <span class="field-hint">Default: input file name, sanitized.</span>
+        </label>
+
+        <label class="field">
+          <span class="field-label">Title</span>
+          <input type="text" id="meta-title-input" autocomplete="off">
+          <span class="field-hint">Default: the asset file name.</span>
+        </label>
+
+        <label class="field">
+          <span class="field-label">dialogue_id</span>
+          <input type="number" id="meta-dialogue-id" step="1" value="0">
+          <span class="field-hint">Numeric. Default 0 (batch convention).</span>
+        </label>
+
+        <label class="field field-wide">
+          <span class="field-label">Description</span>
+          <input type="text" id="meta-description" autocomplete="off">
+          <span class="field-hint">Default: <code>Batch generated from &lt;input file&gt;</code>.</span>
+        </label>
+
+        <label class="field field-wide">
+          <span class="field-label">nextSceneName</span>
+          <input type="text" id="meta-next-scene" autocomplete="off" placeholder="(empty)">
+          <span class="field-hint">Scene loaded after this dialogue ends. Leave empty if not chaining.</span>
+        </label>
+      </div>
+
+      <div class="options-row">
+        <label class="checkbox">
+          <input type="checkbox" id="opt-mojibake" checked>
+          <span>Normalize mojibake (<code>&#xFFFD;</code> &rarr; <code>'</code>) and smart-quote byte artifacts</span>
+        </label>
+        <button type="button" class="btn btn-ghost btn-sm" id="reconvert-btn">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5"/>
+          </svg>
+          Re-run conversion
+        </button>
+      </div>
+    </section>
+
+    <!-- Step 3: Preview -->
+    <section class="card is-hidden" id="step-preview" aria-labelledby="preview-title">
+      <div class="card-head card-head-spread">
+        <div class="card-head">
+          <span class="step-no" aria-hidden="true">03</span>
+          <div>
+            <h2 id="preview-title">Preview &amp; edit</h2>
+            <p class="card-sub" id="preview-sub">Review every parsed block before downloading. Delete anything you do not want.</p>
+          </div>
+        </div>
+        <div class="preview-controls">
+          <label class="inline-field">
+            <span>Rows per page</span>
+            <select id="page-size">
+              <option value="50">50</option>
+              <option value="100" selected>100</option>
+              <option value="250">250</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div class="notice notice-info portrait-notice">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>
+        </svg>
+        <span>Portraits are not resolved on the web. Every <code>background</code>, <code>char_icon</code> and <code>char_fullPortrait</code> exports as null; <code>voice_over</code> is null and <code>expression</code> stays 0 unless set here. Apply portraits later inside Unity via <code>Tools/Batch Apply Character Portraits</code> or <code>Tools/Dialogue/Assign Random MyTurn Portraits</code>.</span>
+      </div>
+
+      <div class="warnings" id="warnings" aria-live="polite"></div>
+
+      <div class="table-scroll">
+        <table class="preview-table" id="preview-table">
+          <thead>
+            <tr>
+              <th scope="col" class="col-index">#</th>
+              <th scope="col" class="col-type">Type</th>
+              <th scope="col" class="col-speaker">Speaker</th>
+              <th scope="col" class="col-text">Text</th>
+              <th scope="col" class="col-choices">Choices (one per line)</th>
+              <th scope="col" class="col-expr">Expression</th>
+              <th scope="col" class="col-pos">Position</th>
+              <th scope="col" class="col-del"><span class="sr-only">Delete</span></th>
+            </tr>
+          </thead>
+          <tbody id="preview-body"></tbody>
+        </table>
+      </div>
+
+      <div class="pagination" id="pagination"></div>
+    </section>
+
+    <!-- Step 4: Download -->
+    <section class="card is-hidden" id="step-download" aria-labelledby="download-title">
+      <div class="card-head">
+        <span class="step-no" aria-hidden="true">04</span>
+        <div>
+          <h2 id="download-title">Download</h2>
+          <p class="card-sub" id="download-sub">One input file produces one <code>.asset</code> and one intermediate <code>.txt</code>.</p>
+        </div>
+      </div>
+
+      <div class="download-row">
+        <button type="button" class="btn btn-primary btn-lg" id="download-asset">
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 4v11m0 0 4-4m-4 4-4-4"/><path d="M5 19h14"/>
+          </svg>
+          Download .asset
+        </button>
+        <button type="button" class="btn btn-secondary btn-lg" id="download-txt">
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 4v11m0 0 4-4m-4 4-4-4"/><path d="M5 19h14"/>
+          </svg>
+          Download .txt
+        </button>
+      </div>
+      <p class="download-names" id="download-names"></p>
+
+      <div class="import-instructions">
+        <h3>Import into Unity</h3>
+        <ol>
+          <li>Copy the generated <code>.asset</code> into <code>Assets/Resources/Scriptables/Dialogues/&lt;Arc&gt;/</code>.</li>
+          <li>Let Unity compile, then run the portrait tool to fill sprites.</li>
+          <li>Wire <code>nextDialogue</code> / <code>nextSceneName</code> in the Inspector if you are chaining dialogues.</li>
+        </ol>
+        <p class="muted-note">No <code>.meta</code> file is produced &mdash; Unity generates it on import.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <span class="mono">dialogue.converter</span>
+      <span>mirrors <code>BatchDialogueGenerator.ParseDialogueAsset</code> semantics</span>
+    </div>
+  </footer>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="js/vendor/mammoth.browser.min.js"></script>
+  <script src="js/converter.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
